@@ -28,7 +28,6 @@ async.parallel([
     else {
         require('./modules/router')(app, config);
         console.log("App ready...");
-        //require('./core/web-server')(app, config);
     }
 
 });
