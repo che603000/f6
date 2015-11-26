@@ -3,9 +3,10 @@ var crypto = require('crypto'),
     async = require('async'),
     mongoose = require('mongoose'),
     validate = require('mongoose-validator'),
-    validationError = require('../../libs/validation-error'),
-    uniqueValidator = require('mongoose-unique-validator'),
+    validationError = require('../../../libs/validation-error'),
+    config = require('../../../config'),
     Schema = mongoose.Schema;
+
 
 var UserSchema = new Schema({
     date: {
@@ -42,9 +43,7 @@ var UserSchema = new Schema({
                 message: 'пароль не менее 4-x символов'
             })
         ],
-        set: function (value) {
-            return crypto.createHash('md5').update(value).digest("hex");
-        }
+
     },
     name: { // ФИО
         type: String,
@@ -73,8 +72,6 @@ var UserSchema = new Schema({
         ]
     },
 });
-
-UserSchema.plugin(uniqueValidator, {message: '{VALUE} :такой пользователь уже есть.', kind: '400'});
 
 UserSchema.methods = {
     toSession: function () {
@@ -124,45 +121,33 @@ UserSchema.statics = {
     },
 
     login: function (account, callback) {
-        this.accountValidate(account, err => {
-            if (err)
-                callback(err)
-            else
-                User.getByUserName(account.userName, function (err, doc) {
-                    if (err)
-                        callback(err);
-                    else {
-                        if (doc.comparePassword(account.password))
-                            callback(null, doc);
-                        else {
-                            callback(validationError(this, {
-                                path: 'password',
-                                message: 'неверный логин или пароль...',
-                                type: 401,
-                            }))
 
-                        }
-
-                    }
+        async.waterfall([
+            (callback) => { // валидация
+                var model = new User(account);
+                model.validate(callback);
+            },
+            (callback) => { // поиск пользователя
+                User.getByUserName(account.userName, (err, doc) => {
+                    callback(err, doc);
                 });
-        });
+            },
+            (doc, callback) => { //  проверка пароля
+                if (doc.comparePassword(account.password))
+                    callback(null, doc);
+                else
+                    callback(validationError(this, {
+                        path: 'password',
+                        message: 'неверный логин или пароль...',
+                        type: 401,
+                    }))
+            },
+        ], callback);
+
     },
-    register: function (account, callback) {
-        var user = User(account);
-        user.save(function (err, doc) {
-            if (err)
-                callback(err);
-            else {
-                callback(null, doc);
-            }
-        });
-    },
-    accountValidate(value, callback){
-        var model = new User(value);
-        model.validate(callback);
-    }
+
 };
 
-var User = module.exports = mongoose.model('user', UserSchema);
+var User = module.exports = mongoose.model('user:login', UserSchema, 'users');
 
 

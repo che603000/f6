@@ -3,10 +3,13 @@
  */
 
 module.exports = {
-    database :{
+    database: {
         connectionString: "mongodb://localhost/test",
     },
     webServer: {
         port: 3000
+    },
+    secrets:{
+        token: "secret key"
     }
 }

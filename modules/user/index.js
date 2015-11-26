@@ -6,7 +6,7 @@
 
 var express = require('express'),
     router = express.Router(),
-    Model = require('./model');
+    Model = require('./models/login');
 
 module.exports = (app, conf)=> {
 
